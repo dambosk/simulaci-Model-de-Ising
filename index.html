@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ca">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ising Model Simulation</title>
+    <!-- Fonts for modern feel -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Visualizer Area -->
+        <main class="sim-view multi-view">
+            <div class="overlay-stats">
+                <p>Temperatura (T/Tc): <span id="tempDisplay">1.00</span></p>
+                <p>Sistema Abs. (K): <span id="kelvinDisplay">2.27</span></p>
+            </div>
+
+            <div class="sim-container">
+                <h3 id="titleOriginal">1. Graella Original</h3>
+                <canvas id="simCanvas150"></canvas>
+                <div class="grid-stats">Magnetització: <span id="magDisplay150">0.00</span></div>
+            </div>
+
+            <div class="sim-container">
+                <h3 id="titleZoom">2. Zoom al Quadrant</h3>
+                <canvas id="simCanvasZoom"></canvas>
+                <div class="grid-stats">Magnetització: <span id="magDisplayZoom">0.00</span></div>
+            </div>
+
+            <div class="sim-container">
+                <h3 id="titleCoarse">3. Coarse-Graining</h3>
+                <canvas id="simCanvas75"></canvas>
+                <div class="grid-stats">Magnetització: <span id="magDisplay75">0.00</span></div>
+            </div>
+        </main>
+
+        <!-- Sidebar Controls -->
+        <aside class="control-panel glass">
+            <h2>Model d'Ising (2D)</h2>
+            <p class="description">Simulador mecànic-estadístic base</p>
+
+            <div class="control-group">
+                <label for="initialState">Estat Inicial</label>
+                <div class="select-wrapper">
+                    <select id="initialState">
+                        <option value="random">Atzari (Aleatori)</option>
+                        <option value="up">Tot +1 (Ferreomagnètic Únic)</option>
+                        <option value="down">Tot -1</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="temperatureSlider">
+                    Temperatura (T/Tc)
+                    <span id="tempSliderValue">1.00</span>
+                </label>
+                <input type="range" id="temperatureSlider" class="custom-slider" min="0.01" max="2.00" step="0.01"
+                    value="1.00">
+            </div>
+
+            <div class="btn-group">
+                <button id="applyInitBtn" class="btn btn-secondary">Aplicar Inici</button>
+            </div>
+
+            <div class="btn-group main-actions">
+                <button id="toggleSimBtn" class="btn btn-primary">Iniciar Simulació</button>
+            </div>
+
+            <div class="info-footer">
+                <p>El valor està normalitzat respecte el punt crític Tc $\approx 2.269$.</p>
+            </div>
+        </aside>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
