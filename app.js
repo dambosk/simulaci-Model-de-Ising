@@ -6,6 +6,7 @@ const b = Math.floor(L / VIEW_SIZE);
 const Z_b = 8.5; // Factor constant de Wilson (Ajustar manualment visual a test)
 
 let grid = [];
+let gridB = []; // For Damage Spreading comparison
 let isSimulating = false;
 let animationId = null;
 let temperature = 1.0; // Normalized minimum T/Tc
@@ -20,10 +21,15 @@ const initStateSelect = document.getElementById('initialState');
 const applyInitBtn = document.getElementById('applyInitBtn');
 const toggleSimBtn = document.getElementById('toggleSimBtn');
 
-// Canvases
+// Canvases Phase 1
 const canvas1 = document.getElementById('simCanvas150');
 const canvas2 = document.getElementById('simCanvasZoom');
 const canvas3 = document.getElementById('simCanvas75');
+
+// Canvases Phase 2 (Damage Spreading)
+const canvasA = document.getElementById('simCanvasA');
+const canvasB = document.getElementById('simCanvasB');
+const canvasD = document.getElementById('simCanvasDamage');
 
 document.getElementById('titleOriginal').textContent = `1. Graella Original (${L}x${L})`;
 document.getElementById('titleZoom').textContent = `2. Zoom Quadrant (${VIEW_SIZE}x${VIEW_SIZE})`;
@@ -32,48 +38,96 @@ document.getElementById('titleCoarse').textContent = `3. Coarse-Graining b=${b} 
 const ctx1 = canvas1.getContext('2d');
 const ctx2 = canvas2.getContext('2d');
 const ctx3 = canvas3.getContext('2d');
+const ctxA = canvasA.getContext('2d');
+const ctxB = canvasB.getContext('2d');
+const ctxD = canvasD.getContext('2d');
 
 canvas1.width = L; canvas1.height = L;
 canvas2.width = VIEW_SIZE; canvas2.height = VIEW_SIZE;
 canvas3.width = VIEW_SIZE; canvas3.height = VIEW_SIZE;
+canvasA.width = L; canvasA.height = L;
+canvasB.width = L; canvasB.height = L;
+canvasD.width = L; canvasD.height = L;
 
 const imgData1 = ctx1.createImageData(L, L);
 const imgData2 = ctx2.createImageData(VIEW_SIZE, VIEW_SIZE);
 const imgData3 = ctx3.createImageData(VIEW_SIZE, VIEW_SIZE);
+const imgDataA = ctxA.createImageData(L, L);
+const imgDataB = ctxB.createImageData(L, L);
+const imgDataD = ctxD.createImageData(L, L);
 
 const mag1 = document.getElementById('magDisplay150');
 const mag2 = document.getElementById('magDisplayZoom');
 const mag3 = document.getElementById('magDisplay75');
+const damageCountDisplay = document.getElementById('damageCount');
 
 function initializeAll(stateType) {
     grid = new Array(L);
+    gridB = new Array(L);
     for (let i = 0; i < L; i++) {
         grid[i] = new Int8Array(L);
+        gridB[i] = new Int8Array(L);
         for (let j = 0; j < L; j++) {
-            if (stateType === 'up') grid[i][j] = 1;
-            else if (stateType === 'down') grid[i][j] = -1;
-            else grid[i][j] = Math.random() < 0.5 ? 1 : -1;
+            let s = 1;
+            if (stateType === 'up') s = 1;
+            else if (stateType === 'down') s = -1;
+            else s = Math.random() < 0.5 ? 1 : -1;
+
+            grid[i][j] = s;
+            gridB[i][j] = s;
         }
     }
     renderAll();
 }
 
 function renderAll() {
-    // 1. Base grid
+    // 1. Base grid & Damage Spreading Phase 2 rendering together (L x L)
     let m1 = 0;
-    let idx1 = 0;
+    let damageNodes = 0;
+    let idxL = 0;
+
     for (let i = 0; i < L; i++) {
         for (let j = 0; j < L; j++) {
-            const s = grid[i][j];
-            m1 += s;
-            if (s === 1) { imgData1.data[idx1++] = 96; imgData1.data[idx1++] = 165; imgData1.data[idx1++] = 250; imgData1.data[idx1++] = 255; }
-            else { imgData1.data[idx1++] = 15; imgData1.data[idx1++] = 23; imgData1.data[idx1++] = 42; imgData1.data[idx1++] = 255; }
+            const sA = grid[i][j];
+            const sB = gridB[i][j];
+            m1 += sA;
+
+            // Render grid A (Base model)
+            if (sA === 1) {
+                imgData1.data[idxL] = 96; imgData1.data[idxL + 1] = 165; imgData1.data[idxL + 2] = 250; imgData1.data[idxL + 3] = 255;
+                imgDataA.data[idxL] = 96; imgDataA.data[idxL + 1] = 165; imgDataA.data[idxL + 2] = 250; imgDataA.data[idxL + 3] = 255;
+            } else {
+                imgData1.data[idxL] = 15; imgData1.data[idxL + 1] = 23; imgData1.data[idxL + 2] = 42; imgData1.data[idxL + 3] = 255;
+                imgDataA.data[idxL] = 15; imgDataA.data[idxL + 1] = 23; imgDataA.data[idxL + 2] = 42; imgDataA.data[idxL + 3] = 255;
+            }
+
+            // Render grid B (Perturbed shadow model)
+            if (sB === 1) {
+                imgDataB.data[idxL] = 96; imgDataB.data[idxL + 1] = 165; imgDataB.data[idxL + 2] = 250; imgDataB.data[idxL + 3] = 255;
+            } else {
+                imgDataB.data[idxL] = 15; imgDataB.data[idxL + 1] = 23; imgDataB.data[idxL + 2] = 42; imgDataB.data[idxL + 3] = 255;
+            }
+
+            // Render Damage grid (Red for perturbation, empty black for equal alignment)
+            if (sA !== sB) {
+                damageNodes++;
+                imgDataD.data[idxL] = 255; imgDataD.data[idxL + 1] = 40; imgDataD.data[idxL + 2] = 40; imgDataD.data[idxL + 3] = 255;
+            } else {
+                imgDataD.data[idxL] = 0; imgDataD.data[idxL + 1] = 0; imgDataD.data[idxL + 2] = 0; imgDataD.data[idxL + 3] = 255;
+            }
+
+            idxL += 4;
         }
     }
     mag1.textContent = (m1 / (L * L)).toFixed(3);
-    ctx1.putImageData(imgData1, 0, 0);
+    damageCountDisplay.textContent = damageNodes;
 
-    // 2. Zoom al Quadrant superior esquerre
+    ctx1.putImageData(imgData1, 0, 0);
+    ctxA.putImageData(imgDataA, 0, 0);
+    ctxB.putImageData(imgDataB, 0, 0);
+    ctxD.putImageData(imgDataD, 0, 0);
+
+    // 2. Zoom al Quadrant superior esquerre (Lligat a Model A per Kadanoff test)
     let m2 = 0;
     let idx2 = 0;
     for (let i = 0; i < VIEW_SIZE; i++) {
@@ -128,32 +182,40 @@ function renderAll() {
     ctx3.putImageData(imgData3, 0, 0);
 }
 
+// Separate node logic handler dynamically capable of mutating arbitrary grids
+function updateSpin(g, i, j, randProb, T, probFlip4, probFlip8) {
+    const s = g[i][j];
+    const up = g[(i - 1 + L) % L][j];
+    const down = g[(i + 1) % L][j];
+    const left = g[i][(j - 1 + L) % L];
+    const right = g[i][(j + 1) % L];
+
+    const sumNeighbors = up + down + left + right;
+    const dE = 2 * s * sumNeighbors;
+
+    if (dE <= 0) {
+        g[i][j] = -s;
+    } else {
+        const prob = (dE === 4) ? probFlip4 : (dE === 8 ? probFlip8 : Math.exp(-dE / T));
+        if (randProb < prob) { // Sync thermal random path applied here!
+            g[i][j] = -s;
+        }
+    }
+}
+
 function doSweep(T) {
     const probFlip4 = Math.exp(-4 / T);
     const probFlip8 = Math.exp(-8 / T);
     const N = L * L;
 
+    // Simulate same thermal noise sequence for BOTH models A and B synchronously
     for (let step = 0; step < N; step++) {
         const i = Math.floor(Math.random() * L);
         const j = Math.floor(Math.random() * L);
-        const s = grid[i][j];
+        const p = Math.random();
 
-        const up = grid[(i - 1 + L) % L][j];
-        const down = grid[(i + 1) % L][j];
-        const left = grid[i][(j - 1 + L) % L];
-        const right = grid[i][(j + 1) % L];
-
-        const sumNeighbors = up + down + left + right;
-        const dE = 2 * s * sumNeighbors;
-
-        if (dE <= 0) {
-            grid[i][j] = -s;
-        } else {
-            const prob = (dE === 4) ? probFlip4 : (dE === 8 ? probFlip8 : Math.exp(-dE / T));
-            if (Math.random() < prob) {
-                grid[i][j] = -s;
-            }
-        }
+        updateSpin(grid, i, j, p, T, probFlip4, probFlip8);
+        updateSpin(gridB, i, j, p, T, probFlip4, probFlip8);
     }
 }
 
@@ -195,6 +257,35 @@ temperatureSlider.addEventListener('input', (e) => {
     tempSliderValue.textContent = valStr;
     tempDisplay.textContent = valStr;
     kelvinDisplay.textContent = (temperature * Tc).toFixed(2);
+});
+
+// Damage interaction setup (Click to perturb Model B)
+canvasB.addEventListener('mousedown', (e) => {
+    const rect = canvasB.getBoundingClientRect();
+    const scaleX = canvasB.width / rect.width;
+    const scaleY = canvasB.height / rect.height;
+
+    // Position mapped to specific node index relative to native grid logic L
+    const cx = Math.floor((e.clientX - rect.left) * scaleX);
+    const cy = Math.floor((e.clientY - rect.top) * scaleY);
+
+    // Depending on resolution, flip a cluster to make damage visible immediately 
+    const r = L > 300 ? 5 : 1;
+
+    for (let di = -r; di <= r; di++) {
+        for (let dj = -r; dj <= r; dj++) {
+            if (di * di + dj * dj <= r * r) {
+                let i = (cy + di + L) % L;
+                let j = (cx + dj + L) % L;
+                gridB[i][j] = -gridB[i][j]; // Flip only Model B introducing macro-damage chaos
+            }
+        }
+    }
+
+    // Draw initial perturbation immediately 
+    if (!isSimulating) {
+        renderAll();
+    }
 });
 
 // Init on page load

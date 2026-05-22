@@ -38,6 +38,25 @@
                 <canvas id="simCanvas75"></canvas>
                 <div class="grid-stats">Magnetització: <span id="magDisplay75">0.00</span></div>
             </div>
+
+            <!-- Fase 2: Damage Spreading Comparativa -->
+            <div class="sim-container">
+                <h3>4. Simulació Model A</h3>
+                <canvas id="simCanvasA"></canvas>
+                <div class="grid-stats">Dinàmica original intacta</div>
+            </div>
+
+            <div class="sim-container">
+                <h3>5. Simulació Model B (Click per pertorbar)</h3>
+                <canvas id="simCanvasB"></canvas>
+                <div class="grid-stats">Diferent per Danys Externs</div>
+            </div>
+
+            <div class="sim-container">
+                <h3>6. Resultant (A - B) Diferencial</h3>
+                <canvas id="simCanvasDamage"></canvas>
+                <div class="grid-stats">Dany Actiu: <span id="damageCount">0</span> espins diferents</div>
+            </div>
         </main>
 
         <!-- Sidebar Controls -->
